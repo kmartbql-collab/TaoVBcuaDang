@@ -453,155 +453,169 @@ ${activeDocument.signature.name}
       {/* 2. MAIN WORKSPACE */}
       <main className="flex-1 flex flex-col lg:flex-row overflow-hidden p-3 md:p-4 gap-4" id="main_workspace">
         
-        {/* Left Column: Intelligent Input & Rules (40%) */}
-        <section className="w-full lg:w-[42%] flex flex-col gap-4 overflow-hidden h-full" id="left_workspace_panel">
+        {/* Left Column: Input, Rules, Config (35%) */}
+        <section className="w-full lg:w-[32%] flex flex-col gap-4 h-full overflow-y-auto pr-1 pb-2 custom-scrollbar" id="left_workspace_panel">
           
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col flex-grow overflow-hidden relative">
-            
-            {/* Tab selection */}
-            <div className="flex border-b border-slate-200 justify-between items-center bg-slate-50 px-4 py-2 shrink-0 select-none">
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => setHistoryTab("chat")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition ${
-                    historyTab === "chat"
-                      ? "bg-[#991B1B] text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Trợ lý Số
-                </button>
-                <button
-                  onClick={() => setHistoryTab("rules")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition ${
-                    historyTab === "rules"
-                      ? "bg-[#991B1B] text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-100"
-                  }`}
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Quy tắc văn phong ({PARTY_STYLE_QUICK_RULES.length})
-                </button>
-              </div>
+          {/* Trợ lý Số */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-col gap-3 shrink-0">
+            <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2">
+              <Sparkles className="w-4 h-4 text-[#991B1B]" />
+              <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Trợ lý Số & Soạn thảo</h3>
+            </div>
+            <div className="relative">
+              <textarea
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!isLoading && inputValue.trim()) {
+                      handleSubmitPrompt(inputValue);
+                    }
+                  }
+                }}
+                className="w-full h-32 p-3 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-600 resize-none pr-12 text-slate-800"
+                placeholder="Nhập yêu cầu dạng: [thể loại văn bản] + [tác giả] + trích văn bản..."
+              />
+              <button
+                onClick={() => handleSubmitPrompt(inputValue)}
+                disabled={isLoading || !inputValue.trim()}
+                className="absolute bottom-2.5 right-2 bg-[#991B1B] text-white p-2 rounded-md hover:bg-red-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow"
+                title="Bấm để dự thảo văn bản Đảng tức thì"
+              >
+                 {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
+            </div>
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => setInputValue("")}
+                className="text-[10px] text-red-600 hover:underline flex items-center gap-0.5 ml-auto"
+                title="Xóa trắng để nhập tự do"
+              >
+                <X className="w-3 h-3" /> Xóa
+              </button>
+            </div>
+          </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-sans font-semibold bg-red-100 text-red-800 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  Trực tuyến
-                </span>
+          {/* Quy tắc văn phong */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col flex-1 min-h-[300px]">
+            <div className="flex items-center justify-between border-b border-slate-200 p-4 pb-3 shrink-0">
+              <div className="flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-[#991B1B]" />
+                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Quy tắc văn phong</h3>
               </div>
             </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="mb-2">
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Bố cục bổ sung (Tùy chọn)
+                </label>
+                <textarea
+                  value={customDocRules}
+                  onChange={(e) => setCustomDocRules(e.target.value)}
+                  placeholder="Ví dụ: Bắt buộc chia cấu trúc thành 4 phần..."
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 h-20 resize-y"
+                />
+              </div>
 
-            {/* Chat screen / Rule screen dynamic view */}
-            {historyTab === "chat" ? (
-              <div className="flex-1 overflow-y-auto p-4 bg-[#fafbfc] flex flex-col justify-center items-center h-full text-center" id="chat_scroll_area">
-                {isLoading ? (
-                  <div className="flex flex-col items-center justify-center gap-4 py-12">
-                    <RefreshCw className="w-8 h-8 animate-spin text-[#991B1B]" />
-                    <p className="text-slate-600 font-semibold uppercase tracking-wider text-xs">Đang dự thảo văn bản...</p>
+              <div className="space-y-2.5">
+                <label className="block text-[11px] font-bold text-slate-700 uppercase">Quy tắc chuẩn mực Đảng</label>
+                {PARTY_STYLE_QUICK_RULES.map((rule, idx) => (
+                  <div key={idx} className="bg-slate-50 p-3 rounded-lg border border-slate-200 border-l-2 border-l-[#991B1B]">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-bold text-slate-800 text-[11px] tracking-tight uppercase">
+                        {rule.rule}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 font-sans leading-relaxed">
+                      {rule.notes}
+                    </p>
                   </div>
-                ) : (
-                  <div className="text-slate-400 space-y-3">
-                    <BookOpen className="w-12 h-12 mx-auto text-slate-300" />
-                    <p>Nhập yêu cầu chi tiết để trợ lý AI kiến tạo văn bản.</p>
-                  </div>
-                )}
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Cấu hình API */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 shrink-0">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
+              <div className="flex items-center gap-1.5">
+                <Settings className="w-4 h-4 text-[#991B1B]" />
+                <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Cấu hình API</h3>
+              </div>
+              <button onClick={() => setShowConfigHelp(true)} className="text-[11px] text-[#991B1B] font-bold hover:underline">
+                Thiết lập
+              </button>
+            </div>
+            {(!customApiKey || !userEmail) ? (
+              <div className="bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-2.5 flex items-start gap-2 text-[11px]">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5 animate-pulse" />
+                <span>Hoạt động bị giới hạn. Nhấn thiết lập để nhập API Key và Email.</span>
               </div>
             ) : (
-              // Instruction list
-              <div className="flex-1 overflow-y-auto p-4 bg-slate-50 space-y-3" id="quick_rules_panel">
-                <div className="bg-red-50 p-4 rounded-xl border border-red-200/60 mb-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileCheck className="w-5 h-5 text-red-700" />
-                    <h4 className="font-bold text-red-900 text-xs uppercase tracking-wider font-serif">
-                      Bộ Quy Tắc Văn Phong Chuẩn Đảng Cộng sản Việt Nam
-                    </h4>
-                  </div>
-                  <p className="text-xs text-red-800 leading-relaxed">
-                    Được tích hợp trực tiếp dựa trên Hiến pháp, Điều lệ Đảng, Quy chế làm việc hành chính Đảng và chỉ đạo của Ban Chấp hành Trung ương.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-2.5">
-                  {PARTY_STYLE_QUICK_RULES.map((rule, idx) => (
-                    <div key={idx} className="bg-white p-3 rounded-lg border border-slate-200 hover:border-red-200 transition shadow-sm">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="w-5 h-5 rounded-full bg-red-100 text-red-800 text-[11px] font-bold flex items-center justify-center shrink-0">
-                          {idx + 1}
-                        </span>
-                        <span className="font-bold text-slate-800 text-xs uppercase tracking-tight">
-                          {rule.rule}
-                        </span>
-                      </div>
-                      <p className="text-[12px] text-slate-600 font-sans pl-7 leading-relaxed">
-                        {rule.notes}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+              <div className="bg-green-50 text-green-800 border border-green-200 rounded-lg p-2 flex items-center gap-2 text-[11px] font-bold">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                Dịch vụ sẵn sàng
               </div>
             )}
+          </div>
+        </section>
 
-            {/* TRÌNH KIẾN TẠO NHANH (QUICK FORM BUILDER BOX) */}
-            <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0" id="interactive_form_builder">
-              <div className="flex items-center justify-between mb-3 border-b border-dashed border-slate-200 pb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <Settings className="w-3.5 h-3.5 text-[#991B1B]" />
-                  Trình kiến tạo nhanh văn bản Đảng
-                </span>
-                <span className="text-[10px] bg-red-100 text-red-800 font-semibold px-2 py-0.5 rounded uppercase">
-                  Tạo cấu trúc tự động
-                </span>
+        {/* Right Column: Props & Preview (68%) */}
+        <section className="w-full lg:w-[68%] flex flex-col gap-4 overflow-hidden h-full" id="right_workspace_panel">
+          
+          {/* Top: Attributes */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 shrink-0">
+            <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
+              <span className="text-sm font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
+                <FileCheck className="w-4 h-4 text-[#991B1B]" />
+                 Trình kiến tạo thuộc tính & Trích yếu
+              </span>
+              <span className="text-[10px] bg-red-100 text-red-800 font-semibold px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                Tạo cấu trúc tự động
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  Thể loại văn bản
+                </label>
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="w-full text-xs font-semibold p-2 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 cursor-pointer"
+                >
+                  {DOCUMENT_TYPES.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name} ({type.abbreviation})
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                {/* 1. Document Type Select */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1 select-none">
-                    Thể loại văn bản
-                  </label>
-                  <select
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                    className="w-full text-xs font-medium p-2 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 cursor-pointer"
-                  >
-                    {DOCUMENT_TYPES.map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name} ({type.abbreviation})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 2. Target Author Select */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1 select-none">
-                    Cơ quan ban hành
-                  </label>
-                  <select
-                    value={selectedAuthor}
-                    onChange={(e) => setSelectedAuthor(e.target.value)}
-                    className="w-full text-xs font-medium p-2 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 cursor-pointer"
-                  >
-                    {AUTHORS.map((author) => (
-                      <option key={author.id} value={author.id}>
-                        {author.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  Cơ quan ban hành
+                </label>
+                <select
+                  value={selectedAuthor}
+                  onChange={(e) => setSelectedAuthor(e.target.value)}
+                  className="w-full text-xs font-semibold p-2 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 cursor-pointer"
+                >
+                  {AUTHORS.map((author) => (
+                    <option key={author.id} value={author.id}>
+                      {author.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Excerpt Summary input */}
-              <div className="mb-3">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase select-none">
-                    Nội dung trích văn bản (Chỉ cần viết ý chính)
-                  </label>
-                  <span className="text-[9px] text-slate-400 italic">
-                    Hệ thống sẽ chuẩn hóa ngôn ngữ Đảng
-                  </span>
-                </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                  Nội dung trích yếu
+                </label>
                 <input
                   type="text"
                   value={excerptInput}
@@ -616,286 +630,206 @@ ${activeDocument.signature.name}
                   }}
                   placeholder={
                     DOCUMENT_TYPES.find((t) => t.id === selectedType)?.placeholderText ||
-                    "ví dụ: Nghiệp vụ chi bộ, công nhận đảng viên..."
+                    "Nghiệp vụ chi bộ..."
                   }
-                  className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-                />
-              </div>
-
-              {/* Custom Rules Input */}
-              <div className="mb-3">
-                <div className="flex justify-between items-center mb-1">
-                  <label className="block text-[11px] font-bold text-slate-600 uppercase select-none">
-                    Quy tắc / Bố cục bổ sung (Tùy chọn)
-                  </label>
-                  <span className="text-[9px] text-slate-400 italic">
-                    Ép buộc hệ thống tuân thủ theo ý muốn
-                  </span>
-                </div>
-                <textarea
-                  value={customDocRules}
-                  onChange={(e) => setCustomDocRules(e.target.value)}
-                  placeholder="Ví dụ: Bắt buộc chia cấu trúc thành 4 phần, phần kết mở rộng 200 chữ, sử dụng văn phong quyết liệt..."
-                  className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 h-16 resize-y"
+                  className="w-full text-xs p-2 bg-slate-50 border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
                 />
               </div>
             </div>
-
-            {/* ENTRY PROMPT INPUT */}
-            <div className="bg-slate-50 border-t border-slate-200 p-4 pt-0 shrink-0" id="final_drafting_prompt">
-                {(!customApiKey || !userEmail) && (
-                  <div className="bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-2.5 mb-2.5 flex items-start gap-2 text-xs">
-                    <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5 animate-pulse" />
-                    <div className="flex-1">
-                      <span className="font-bold">Đồng chí lưu ý:</span> Hiện đang thiếu cấu hình Gmail hoặc API Key cá nhân.
-                      <button
-                        onClick={() => setShowConfigHelp(true)}
-                        className="ml-1 text-[#991B1B] font-bold underline hover:text-red-700 cursor-pointer text-left inline-block"
-                      >
-                        Thiết lập ngay ở đây &rarr;
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center mb-1 bg-white p-2 rounded border border-slate-200 shadow-inner">
-                  <div className="text-[11px] text-slate-500 truncate max-w-[80%] pr-2">
-                    <span className="font-bold text-[#991B1B]">Cú pháp đầu vào:</span>{" "}
-                    <code className="font-mono text-slate-800 select-all">{inputValue}</code>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setInputValue("");
-                    }}
-                    className="text-[10px] text-red-600 hover:underline flex items-center gap-0.5"
-                    title="Xóa trắng để nhập tự do"
-                  >
-                    <X className="w-3 h-3" /> Xóa
-                  </button>
-                </div>
-
-                <div className="relative mt-2">
-                  <textarea
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        if (!isLoading && inputValue.trim()) {
-                          handleSubmitPrompt(inputValue);
-                        }
-                      }
-                    }}
-                    className="w-full h-20 p-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-600 resize-none pr-12 text-slate-800"
-                    placeholder="Nhập yêu cầu dạng: [thể loại văn bản] + [tác giả] + trích văn bản..."
-                  />
-                  <button
-                    onClick={() => handleSubmitPrompt(inputValue)}
-                    disabled={isLoading || !inputValue.trim()}
-                    className="absolute bottom-2.5 right-2 bg-[#991B1B] text-white p-2 rounded-md hover:bg-red-800 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center shadow"
-                    title="Bấm để dự thảo văn bản Đảng tức thì"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
           </div>
-        </section>
 
-        {/* Right Column: High-fidelity Document Preview (60%) */}
-        <section className="w-full lg:w-[58%] bg-slate-300 rounded-xl shadow-inner p-2 md:p-6 flex flex-col justify-between overflow-hidden h-full" id="document_preview_panel">
-          
-          {/* Document tools toolbar */}
-          <div className="flex items-center justify-between mb-3 bg-white/80 p-2.5 rounded-lg border border-slate-200/60 select-none">
-            <div className="flex items-center gap-2">
-              <div className="p-1 px-2.5 bg-red-100 text-red-800 font-bold uppercase text-[10px] tracking-wide rounded-md border border-red-200 flex items-center gap-1">
-                <FileText className="w-3 h-3" />
-                VĂN BẢN TRÌNH DUYỆT
-              </div>
-              <span className="hidden sm:inline text-xs text-slate-500 font-medium">|</span>
-              <span className="hidden sm:inline text-xs text-slate-700 font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                Khổ giấy: A4 (Tiêu chuẩn hành chính)
-              </span>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              {/* Compliance indicator */}
-              <div className="hidden md:flex items-center gap-1.5 border border-dashed border-red-100 bg-red-50/50 px-2.5 py-1 rounded">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-red-950 uppercase">
-                  Độ khớp Đảng quy: {documentStats.score}%
+          {/* Bottom: Preview Panel */}
+          <div className="bg-slate-300 rounded-xl shadow-inner p-2 md:p-6 flex flex-col flex-1 overflow-hidden relative">
+            {/* Document tools toolbar */}
+            <div className="flex items-center justify-between mb-3 bg-white/80 p-2.5 rounded-lg border border-slate-200/60 select-none">
+              <div className="flex items-center gap-2">
+                <div className="p-1 px-2.5 bg-red-100 text-red-800 font-bold uppercase text-[10px] tracking-wide rounded-md border border-red-200 flex items-center gap-1">
+                  <FileText className="w-3 h-3" />
+                  VĂN BẢN TRÌNH DUYỆT
+                </div>
+                <span className="hidden sm:inline text-xs text-slate-500 font-medium">|</span>
+                <span className="hidden sm:inline text-xs text-slate-700 font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                  Khổ A4 (Tiêu chuẩn hành chính)
                 </span>
               </div>
 
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className={`text-xs px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer ${
-                  isEditing ? "bg-[#991B1B] text-white border border-[#991B1B]" : "bg-white hover:bg-slate-50 border border-slate-200 text-slate-700"
-                }`}
-                title={isEditing ? "Lưu thay đổi văn bản" : "Chỉnh sửa nội dung văn bản trực tiếp"}
-                disabled={!activeDocument}
-              >
-                {isEditing ? (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Lưu nội dung
-                  </>
-                ) : (
-                  <>
-                    <Settings className="w-3.5 h-3.5" />
-                    Sửa đổi
-                  </>
-                )}
-              </button>
-
-              {/* Download docx button */}
-              <button
-                onClick={handleDownloadDocx}
-                className="bg-[#991B1B] hover:bg-red-800 border-red-900 border text-white text-xs px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
-                title="Tải văn bản định dạng Word (.docx)"
-                disabled={!activeDocument}
-              >
-                <FileDown className="w-3.5 h-3.5" />
-                Tải về Word
-              </button>
-
-              {/* Copy plain-text button */}
-              <button
-                onClick={handleCopyToClipboard}
-                className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
-                title="Sao chép toàn bộ văn bản vào khay tạm"
-                disabled={!activeDocument}
-              >
-                {copySuccess ? (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                    Đã sao chép!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    Sao chép bản thảo
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Paper document area styled as Standard A4 Letterhead */}
-          <div className="flex-1 overflow-y-auto bg-slate-400 p-2 md:p-6 rounded-lg flex justify-center border border-slate-300 shadow-inner">
-            
-            {activeDocument ? (
-              <div className="bg-white w-full max-w-[640px] min-h-[880px] p-8 md:p-14 text-slate-900 flex flex-col font-serif leading-relaxed shadow-2xl relative select-text mx-auto bg-[radial-gradient(#f8fafc_1px,transparent_1px)] bg-[size:16px_16px]">
-                
-                {/* Watermark symbol background */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.02] pointer-events-none select-none">
-                  <span className="text-[180px] font-serif font-bold text-red-900 block">☭</span>
+              <div className="flex items-center space-x-2">
+                {/* Compliance indicator */}
+                <div className="hidden md:flex items-center gap-1.5 border border-dashed border-red-100 bg-red-50/50 px-2.5 py-1 rounded">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-red-950 uppercase">
+                    Độ khớp Đảng quy: {documentStats.score}%
+                  </span>
                 </div>
 
-                {/* 1. Official Document Letterhead Header */}
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-10 border-b border-red-900/10 pb-6 relative z-10 select-text">
-                  <div className="text-center w-full sm:w-56 shrink-0">
-                    <p className="font-bold text-[11px] md:text-xs uppercase tracking-tight font-sans text-slate-800">
-                      ĐẢNG CỘNG SẢN VIỆT NAM
-                    </p>
-                    <p className="text-[12px] md:text-sm font-bold border-b border-black pb-1.5 mb-1.5 font-sans text-red-900">
-                      {activeDocument.header.organization}
-                    </p>
-                    <p className="text-[10px] md:text-xs font-semibold text-slate-600 font-mono">
-                      {activeDocument.header.subHeader}
-                    </p>
-                  </div>
-                  
-                  <div className="text-center sm:text-right w-full sm:w-auto italic text-xs md:text-sm text-slate-700 pt-1 flex flex-col">
-                    <span className="font-sans font-medium text-slate-800 not-italic uppercase tracking-wider text-[10px] text-[#991B1B] mb-1 block">
-                      ★ CHUẨN ĐẢNG QUY ★
-                    </span>
-                    <span>{activeDocument.header.locationDate}</span>
-                  </div>
-                </div>
-
-                {/* 2. Official Actionable Document Title */}
-                <div className="text-center mb-8 relative z-10 select-text">
-                  <h2 className="font-bold text-lg md:text-xl uppercase text-slate-950 font-serif leading-snug tracking-tight">
-                    {activeDocument.title.split(":").map((v, i) => {
-                      if (i === 0) return <span key={i} className="block text-red-700 border-b-2 border-red-700/20 max-w-xs mx-auto pb-1 mb-2 font-black tracking-normal">{v}</span>;
-                      return <span key={i} className="block text-sm md:text-base text-slate-800 font-bold mt-1 max-w-lg mx-auto">{v}</span>;
-                    })}
-                  </h2>
-                </div>
-
-                {/* 3. Fully formatted content with custom parser OR TextArea for Editing */}
-                <div className="text-sm md:text-base space-y-4 flex-1 relative z-10 select-text">
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className={`text-[11px] px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer ${
+                    isEditing ? "bg-[#991B1B] text-white border border-[#991B1B]" : "bg-white hover:bg-slate-50 border border-slate-200 text-slate-700"
+                  }`}
+                  title={isEditing ? "Lưu thay đổi văn bản" : "Chỉnh sửa nội dung văn bản trực tiếp"}
+                  disabled={!activeDocument}
+                >
                   {isEditing ? (
-                    <textarea 
-                      className="w-full h-full min-h-[500px] border-2 border-red-300 p-4 rounded-lg bg-red-100/50 focus:outline-none focus:ring-2 focus:ring-red-600 font-serif leading-relaxed text-slate-900 resize-y"
-                      value={activeDocument.bodyMarkdown}
-                      onChange={(e) => setActiveDocument({ ...activeDocument, bodyMarkdown: e.target.value })}
-                    />
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Lưu nội dung
+                    </>
                   ) : (
-                    parseDocumentBody(activeDocument.bodyMarkdown)
+                    <>
+                      <Settings className="w-3.5 h-3.5" />
+                      Sửa nhanh
+                    </>
                   )}
-                </div>
+                </button>
 
-                {/* 4. Signature Block (Left stamp placeholder / Right authorized name) */}
-                <div className="mt-12 flex justify-between items-start gap-8 relative z-10 select-text">
+                <button
+                  onClick={handleDownloadDocx}
+                  className="bg-[#991B1B] hover:bg-red-800 border-red-900 border text-white text-[11px] px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                  title="Tải văn bản định dạng Word (.docx)"
+                  disabled={!activeDocument}
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  Tải Docx
+                </button>
+
+                <button
+                  onClick={handleCopyToClipboard}
+                  className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-[11px] px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                  title="Sao chép toàn bộ văn bản vào khay tạm"
+                  disabled={!activeDocument}
+                >
+                  {copySuccess ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                      Đã sao chép!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      Copy bản thảo
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Paper document area styled as Standard A4 Letterhead */}
+            <div className="flex-1 overflow-y-auto bg-slate-400 p-2 md:p-6 rounded-lg flex justify-center border border-slate-300 shadow-inner">
+              
+              {activeDocument ? (
+                <div className="bg-white w-full max-w-[640px] min-h-[880px] p-8 md:p-14 text-slate-900 flex flex-col font-serif leading-relaxed shadow-lg relative select-text mx-auto bg-[radial-gradient(#f8fafc_1px,transparent_1px)] bg-[size:16px_16px]">
                   
-                  {/* Left: Place for archives receiving list */}
-                  <div className="w-[45%] text-[10px] md:text-xs border border-slate-200 p-2.5 rounded bg-slate-50 italic text-slate-600 leading-normal select-none">
-                    <p className="font-bold uppercase tracking-tight text-slate-700 not-italic mb-1 border-b border-slate-200 pb-0.5">
-                      Nơi nhận:
-                    </p>
-                    <p>- Thường trực Tỉnh ủy (để b/c);</p>
-                    <p>- Các Ban xây dựng Đảng;</p>
-                    <p>- Văn phòng Cấp ủy;</p>
-                    <p>- Đảng ủy, Chi ủy liên quan;</p>
-                    <p>- Lưu Văn phòng.</p>
+                  {/* Watermark symbol background */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.02] pointer-events-none select-none">
+                    <span className="text-[180px] font-serif font-bold text-red-900 block">☭</span>
                   </div>
 
-                  {/* Right: Actual authorized Signatory signature */}
-                  <div className="w-[50%] text-center font-sans">
-                    <p className="font-bold text-[12px] md:text-xs uppercase text-slate-900 tracking-tight whitespace-pre-line leading-relaxed font-sans">
-                      {activeDocument.signature.title}
-                    </p>
+                  {/* 1. Official Document Letterhead Header */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-10 border-b border-red-900/10 pb-6 relative z-10 select-text">
+                    <div className="text-center w-full sm:w-56 shrink-0">
+                      <p className="font-bold text-[11px] md:text-xs uppercase tracking-tight font-sans text-slate-800">
+                        ĐẢNG CỘNG SẢN VIỆT NAM
+                      </p>
+                      <p className="text-[12px] md:text-sm font-bold border-b border-black pb-1.5 mb-1.5 font-sans text-[#991B1B]">
+                        {activeDocument.header.organization}
+                      </p>
+                      <p className="text-[10px] md:text-xs font-semibold text-slate-600 font-mono">
+                        {activeDocument.header.subHeader}
+                      </p>
+                    </div>
                     
-                    {/* Placeholder for official seal */}
-                    <div className="h-16 flex items-center justify-center my-2 relative select-none">
-                      <div className="w-14 h-14 rounded-full border-2 border-red-500/10 border-dashed flex items-center justify-center text-red-500/20 text-[8px] font-bold select-none absolute">
-                        (DẤU ĐỎ)
-                      </div>
+                    <div className="text-center sm:text-right w-full sm:w-auto italic text-xs md:text-sm text-slate-700 pt-1 flex flex-col">
+                      <span className="font-sans font-medium text-slate-800 not-italic uppercase tracking-wider text-[10px] text-[#991B1B] mb-1 block">
+                        ★ CHUẨN ĐẢNG QUY ★
+                      </span>
+                      <span>{activeDocument.header.locationDate}</span>
+                    </div>
+                  </div>
+
+                  {/* 2. Official Actionable Document Title */}
+                  <div className="text-center mb-8 relative z-10 select-text">
+                    <h2 className="font-bold text-lg md:text-xl uppercase text-slate-950 font-serif leading-snug tracking-tight">
+                      {activeDocument.title.split(":").map((v, i) => {
+                        if (i === 0) return <span key={i} className="block text-red-700 border-b-2 border-red-700/20 max-w-xs mx-auto pb-1 mb-2 font-black tracking-normal">{v}</span>;
+                        return <span key={i} className="block text-sm md:text-base text-slate-800 font-bold mt-1 max-w-lg mx-auto">{v}</span>;
+                      })}
+                    </h2>
+                  </div>
+
+                  {/* 3. Fully formatted content with custom parser OR TextArea for Editing */}
+                  <div className="text-sm md:text-base space-y-4 flex-1 relative z-10 select-text">
+                    {isEditing ? (
+                      <textarea 
+                        className="w-full h-full min-h-[500px] border-2 border-red-300 p-4 rounded-lg bg-red-100/50 focus:outline-none focus:ring-2 focus:ring-red-600 font-serif leading-relaxed text-slate-900 resize-y"
+                        value={activeDocument.bodyMarkdown}
+                        onChange={(e) => setActiveDocument({ ...activeDocument, bodyMarkdown: e.target.value })}
+                      />
+                    ) : (
+                      parseDocumentBody(activeDocument.bodyMarkdown)
+                    )}
+                  </div>
+
+                  {/* 4. Signature Block (Left stamp placeholder / Right authorized name) */}
+                  <div className="mt-12 flex justify-between items-start gap-8 relative z-10 select-text">
+                    
+                    {/* Left: Place for archives receiving list */}
+                    <div className="w-[45%] text-[10px] md:text-xs border border-slate-200 p-2.5 rounded bg-slate-50 italic text-slate-600 leading-normal select-none relative pb-8">
+                      <p className="font-bold uppercase tracking-tight text-slate-700 not-italic mb-1 border-b border-slate-200 pb-0.5">
+                        Nơi nhận:
+                      </p>
+                      <p>- Thường trực Tỉnh ủy (để b/c);</p>
+                      <p>- Các Ban xây dựng Đảng;</p>
+                      <p>- Văn phòng Cấp ủy;</p>
+                      <p>- Đảng ủy, Chi ủy liên quan;</p>
+                      <p>- Lưu Văn phòng.</p>
+                      <p className="absolute bottom-1 right-2 text-[8px] font-mono not-italic text-slate-400">{activeDocument.creatorCode}</p>
                     </div>
 
-                    <p className="font-bold text-sm md:text-base text-slate-950 font-serif border-t border-slate-200/50 pt-2">
-                      {activeDocument.signature.name}
-                    </p>
+                    {/* Right: Actual authorized Signatory signature */}
+                    <div className="w-[50%] text-center font-sans">
+                      <p className="font-bold text-[12px] md:text-xs uppercase text-slate-900 tracking-tight whitespace-pre-line leading-relaxed font-sans">
+                        {activeDocument.signature.title}
+                      </p>
+                      
+                      {/* Placeholder for official seal */}
+                      <div className="h-16 flex items-center justify-center my-2 relative select-none">
+                        <div className="w-14 h-14 rounded-full border-2 border-red-500/10 border-dashed flex items-center justify-center text-red-500/20 text-[8px] font-bold select-none absolute">
+                          (DẤU ĐỎ)
+                        </div>
+                      </div>
+
+                      <p className="font-bold text-sm md:text-base text-slate-950 font-serif border-t border-slate-200/50 pt-2">
+                        {activeDocument.signature.name}
+                      </p>
+                    </div>
+
                   </div>
 
                 </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center p-8 text-slate-500">
+                  <FileCheck className="w-16 h-16 text-slate-400 mb-4 animate-bounce" />
+                  <h3 className="font-bold text-slate-700 text-base">Hiện chưa có văn bản dự thảo nào</h3>
+                  <p className="text-xs text-slate-500 max-w-sm mt-1">
+                    Đồng chí hãy điền thông tin nhanh ở bảng bên trái hoặc gửi yêu cầu cho chatbot để tạo ngay.
+                  </p>
+                </div>
+              )}
 
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center p-8 text-slate-500">
-                <FileCheck className="w-16 h-16 text-slate-400 mb-4 animate-bounce" />
-                <h3 className="font-bold text-slate-700 text-base">Hiện chưa có văn bản dự thảo nào</h3>
-                <p className="text-xs text-slate-500 max-w-sm mt-1">
-                  Đồng chí hãy điền thông tin nhanh ở bảng bên trái hoặc gửi yêu cầu cho chatbot để tạo ngay.
-                </p>
-              </div>
-            )}
+            </div>
+
+            {/* Footer informational system banner inside preview */}
+            <div className="mt-3 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-600 bg-white/50 px-3 py-2 rounded-md border border-slate-200 select-none">
+              <span className="font-medium">
+                Văn bản được biên soạn dựa trên Hệ thống cơ sở dữ liệu Văn kiện văn phòng Đảng
+              </span>
+              <span className="text-[#991B1B] font-bold uppercase mt-1 sm:mt-0 tracking-wider">
+                ★ TUÂN THỦ NGHIÊM NGẶT ĐẢNG QUY
+              </span>
+            </div>
 
           </div>
-
-          {/* Footer informational system banner inside preview */}
-          <div className="mt-3 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center text-[11px] text-slate-600 bg-white/50 px-3 py-2 rounded-md border border-slate-200 select-none">
-            <span className="font-medium">
-              Văn bản được biên soạn dựa trên Hệ thống cơ sở dữ liệu Văn kiện văn phòng Trung ương khóa XIII
-            </span>
-            <span className="text-[#991B1B] font-bold uppercase mt-1 sm:mt-0 tracking-wider">
-              ★ TUÂN THỦ NGHIÊM NGẶT ĐẢNG QUY
-            </span>
-          </div>
-
         </section>
 
       </main>

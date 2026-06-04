@@ -26,6 +26,8 @@ const ai = apiKey
 
 // Chat completion and document generator endpoint
 app.post("/api/chat", async (req, res) => {
+  req.setTimeout(600000); // 10 minutes timeout
+  res.setTimeout(600000); // 10 minutes timeout
   try {
     const { message, history, customApiKey, userEmail, customRules } = req.body;
 
@@ -200,18 +202,26 @@ HÃY PHẢN HỒI BẰNG CHỈ MỘT ĐỐI TƯỢNG JSON DUY NHẤT khớp chu�
         ? `${message}\n\n[LƯU Ý QUÂN LỆNH TỪ NGƯỜI DÙNG ĐỐI VỚI VĂN BẢN NÀY - BẮT BUỘC TUÂN THỦ TUYỆT ĐỐI KHÔNG ĐƯỢC LÀM TRÁI]:\n${customRules.trim()}` 
         : message;
 
-    const response = await requestAiClient.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: [
-        ...formattedHistory,
-        { role: "user", parts: [{ text: finalUserMessage }] },
-      ],
-      config: {
-        systemInstruction,
-        responseMimeType: "application/json",
-        temperature: 0.2, // Low temperature for highly precise Vietnamese legal formatting
-      },
-    });
+    let response;
+    try {
+      response = await requestAiClient.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [
+          ...formattedHistory,
+          { role: "user", parts: [{ text: finalUserMessage }] },
+        ],
+        config: {
+          systemInstruction,
+          responseMimeType: "application/json",
+          temperature: 0.2, // Low temperature for highly precise Vietnamese legal formatting
+        },
+      });
+    } catch (aiError: any) {
+      return res.status(200).json({
+        isValid: false,
+        errorMsg: `Lỗi kết nối dịch vụ AI: ${aiError.message || aiError}`,
+      });
+    }
 
     const text = response.text || "{}";
     let jsonResponse;
@@ -224,16 +234,20 @@ HÃY PHẢN HỒI BẰNG CHỈ MỘT ĐỐI TƯỢNG JSON DUY NHẤT khớp chu�
       };
     }
 
-    res.json(jsonResponse);
+    return res.status(200).json(jsonResponse);
 
   } catch (error: any) {
     console.error("Express /api/chat error:", error);
-    res.status(500).json({
-      isValid: false,
-      errorMsg: `Lỗi kết nối máy chủ hoặc dịch vụ AI: ${error.message || error}`,
-    });
+    if (!res.headersSent) {
+      return res.status(500).json({
+        isValid: false,
+        errorMsg: `Lỗi cấu hình máy chủ: ${error.message || error}`,
+      });
+    }
   }
 });
+
+
 
 // Serve frontend build or development middleware
 async function startServer() {
@@ -251,9 +265,12 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server is running at http://localhost:${PORT}`);
   });
+  server.setTimeout(600000);
+  server.keepAliveTimeout = 600000;
+  server.headersTimeout = 600000;
 }
 
 startServer().catch((err) => {
