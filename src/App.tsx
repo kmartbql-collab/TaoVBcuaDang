@@ -162,6 +162,9 @@ Tuy nhiên, bên cạnh những thành tích đã đạt được, việc nghiê
   const handleSubmitPrompt = async (textToSend: string) => {
     if (!textToSend.trim()) return;
 
+    // Auto-switch to chat tab so user can see immediate feedback and loading state
+    setHistoryTab("chat");
+
     // Add user message to UI
     const newUserMessage: Message = {
       id: Math.random().toString(),
@@ -658,6 +661,14 @@ ${activeDocument.signature.name}
                   type="text"
                   value={excerptInput}
                   onChange={(e) => setExcerptInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (!isLoading && inputValue.trim()) {
+                        handleSubmitPrompt(inputValue);
+                      }
+                    }
+                  }}
                   placeholder={
                     DOCUMENT_TYPES.find((t) => t.id === selectedType)?.placeholderText ||
                     "ví dụ: Nghiệp vụ chi bộ, công nhận đảng viên..."
@@ -704,6 +715,14 @@ ${activeDocument.signature.name}
                   <textarea
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        if (!isLoading && inputValue.trim()) {
+                          handleSubmitPrompt(inputValue);
+                        }
+                      }
+                    }}
                     className="w-full h-20 p-3 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-600 resize-none pr-12 text-slate-800"
                     placeholder="Nhập yêu cầu dạng: [thể loại văn bản] + [tác giả] + trích văn bản..."
                   />
