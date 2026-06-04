@@ -1,0 +1,6 @@
+{
+  "name": "Soạn thảo văn bản của Đảng",
+  "description": "Ứng dụng trợ lý ảo hỗ trợ soạn thảo văn bản Đảng bộ, Chi bộ chuẩn quy định hành chính và Đảng quy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
