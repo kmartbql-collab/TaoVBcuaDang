@@ -27,7 +27,7 @@ const ai = apiKey
 // Chat completion and document generator endpoint
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, history, customApiKey, userEmail } = req.body;
+    const { message, history, customApiKey, userEmail, customRules } = req.body;
 
     // Use the custom client API key if provided, otherwise fall back to system env key
     const activeKey = (customApiKey && customApiKey.trim()) ? customApiKey.trim() : process.env.GEMINI_API_KEY;
@@ -140,16 +140,23 @@ II. CHỈ THỊ CHI TIẾT ĐẠI DIỆN ĐỊNH DẠNG & VĂN PHONG CHO TỪNG 
         + Nội dung: [Trình bày chương trình hoặc chủ trì xem xét nội dung gì]
       * Yêu cầu phục vụ: "Đồng chí đến dự mang theo tài liệu / Trang phục lịch sự chính trị..."
 
-III. HỆ THỐNG THUẬT NGỮ CHÍNH TRỊ CỐT LÕI (GIỮ NGUYÊN MẪU):
+III. BỐ CỤC NỘI DUNG VÀ KỸ THUẬT TRÌNH BÀY (THEO HƯỚNG DẪN 05):
+- Các từ "Phần", "Chương" và số La Mã/Chữ phải được viết IN HOA, dòng liền kề dưới là tên phần/chương (IN HOA, đậm).
+- Từ "Mục" và số Ả-rập viết, dòng dưới là tên mục (IN HOA, đậm).
+- "Điều" + số thứ tự (Ả-rập) + tên điều được in thường, đậm (Ví dụ: **Điều 1. Phạm vi điều chỉnh**).
+- Khoản: Dùng số Ả-rập có dấu chấm (Ví dụ: 1., 2.). Điểm: Dùng chữ cái tiếng Việt có dấu ngoặc đơn (Ví dụ: a), b), c)).
+- Ký hiệu văn bản chuẩn theo Hướng dẫn 05: Nghị quyết (NQ), Quyết định và Quy định (QĐ), Chỉ thị (CT), Chương trình (CTr), Thông tri (TT), Tờ trình (TTr), Báo cáo (BC), Chi bộ (CB), Đảng uỷ (ĐU), Uỷ ban kiểm tra (UBKT), Đại hội (ĐH).
+
+IV. HỆ THỐNG THUẬT NGỮ CHÍNH TRỊ CỐT LÕI (GIỮ NGUYÊN MẪU):
 - "Ban Chấp hành Trung ương", "Bộ Chính trị", "Ban Bí thư", "Ban Thường vụ", "Ủy ban Kiểm tra".
 - "Nguyên tắc tập trung dân chủ, tự phê bình và phê bình", "Nêu gương của cán bộ, đảng viên, nhất là người đứng đầu".
 - "Học tập và làm theo tư tưởng, đạo đức, phong cách Hồ Chí Minh".
 - "Đại hội Đảng bộ", "sinh hoạt chi bộ định kỳ", "kiểm tra dấu hiệu vi phạm".
 
-IV. THẨM QUYỀN KÝ & HỌ TÊN (KHÔNG HỌC VỊ/HỌC HÀM):
-- "title": Quyền hạn đại diện ký, In hoa, cỡ 14, Đứng, đậm (Vd: "T/M BAN THƯỜNG VỤ", "T/M ỦY BAN KIỂM TRA", "BAN TỔ CHỨC", "VĂN PHÒNG").
-- "signerTitle": Chức vụ thực tế người ký (Vd: "BÍ THƯ", "CHỦ NHIỆM", "TRƯỞNG BAN", "CHÁNH VĂN PHÒNG").
-- "name": Chỉ in Họ tên thuần túy, in thường, đậm (Vd: "Trần Văn Việt", "Lê Văn Cường"). TUYỆT ĐỐI KHÔNG GHI chức danh học hàm học vị như GS., TS., ThS., Đại tá, Đồng chí... trước họ tên theo Điều 7.1.3 của Hướng dẫn 05!
+V. THẨM QUYỀN KÝ & HỌ TÊN, NƠI NHẬN:
+- "title": Quyền hạn đại diện ký, IN HOA (Vd: "T/M BAN THƯỜNG VỤ", "T/M ỦY BAN KIỂM TRA", "BAN TỔ CHỨC", "VĂN PHÒNG"). Riêng uỷ quyền ký: "T/L BAN THƯỜNG VỤ" hoặc "K/T TRƯỞNG BAN". Đặc biệt với Đảng uỷ không ghi Bí thư Đảng uỷ mà ghi "T/M ĐẢNG UỶ" và chức danh "BÍ THƯ".
+- "signerTitle": Chức vụ thực tế người ký (Vd: "BÍ THƯ", "CHỦ NHIỆM", "TRƯỞNG BAN", "CHÁNH VĂN PHÒNG"). Tuyệt đối KHÔNG ghi tên cấp uỷ, tổ chức đảng kèm chức vụ (Không ghi Bí thư Tỉnh uỷ, Phó Chủ nhiệm UBKT).
+- "name": Chỉ in Họ tên thuần túy, in thường, đậm (Vd: "Trần Văn Việt", "Lê Văn Cường"). TUYỆT ĐỐI KHÔNG GHI chức danh học hàm học vị, danh hiệu, quân hàm như GS., TS., ThS., Đại tá, Đồng chí... trước họ tên theo Điều 7.1.3 của Hướng dẫn 05!
 
 QUY ĐỊNH VỀ CÚ PHÁP ĐẦU VÀO VÀ KHỚP LỆNH:
 - Người dùng cần nhập đúng hoặc gần đúng theo cấu trúc: "[thể loại văn bản] + [tác giả] + trích văn bản [nội dung tóm lược]"
@@ -189,11 +196,15 @@ HÃY PHẢN HỒI BẰNG CHỈ MỘT ĐỐI TƯỢNG JSON DUY NHẤT khớp chu�
       parts: [{ text: h.content }],
     }));
 
+    const finalUserMessage = customRules && customRules.trim() 
+        ? `${message}\n\n[LƯU Ý QUÂN LỆNH TỪ NGƯỜI DÙNG ĐỐI VỚI VĂN BẢN NÀY - BẮT BUỘC TUÂN THỦ TUYỆT ĐỐI KHÔNG ĐƯỢC LÀM TRÁI]:\n${customRules.trim()}` 
+        : message;
+
     const response = await requestAiClient.models.generateContent({
       model: "gemini-3.5-flash",
       contents: [
         ...formattedHistory,
-        { role: "user", parts: [{ text: message }] },
+        { role: "user", parts: [{ text: finalUserMessage }] },
       ],
       config: {
         systemInstruction,

@@ -18,7 +18,9 @@ import {
   FileCheck,
   FileDown
 } from "lucide-react";
-import { DOCUMENT_TYPES, AUTHORS, SAMPLES, PARTY_STYLE_QUICK_RULES } from "./presets";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import { saveAs } from "file-saver";
+import { DOCUMENT_TYPES, AUTHORS, PARTY_STYLE_QUICK_RULES } from "./presets";
 import { Message, PartyDocument } from "./types";
 
 export default function App() {
@@ -26,23 +28,15 @@ export default function App() {
   const [selectedType, setSelectedType] = useState<string>("nghi-quyet");
   const [selectedAuthor, setSelectedAuthor] = useState<string>("bch-trung-uong");
   const [excerptInput, setExcerptInput] = useState<string>("");
+  const [customDocRules, setCustomDocRules] = useState<string>("");
 
   // Main prompt text area
   const [inputValue, setInputValue] = useState<string>(
     "[Nghị quyết] + [Ban Chấp hành Trung ương] + trích văn bản về việc tăng cường sức chiến đấu và chất lượng sinh hoạt chi bộ."
   );
 
-  // Chat message state
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "model",
-      content: "Xin kính chào đồng chí. Tôi là Trợ lý Soạn thảo Văn bản Đảng. Vui lòng nhập yêu cầu theo cấu trúc chuẩn: **[thể loại văn bản] + [tác giả] + trích văn bản ...** hoặc sử dụng **Trình kiến tạo nhanh** ở dưới để sinh văn bản đúng quy chuẩn nghiệp vụ văn phòng cấp ủy.",
-      timestamp: new Date()
-    }
-  ]);
-
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
   const [activeDocument, setActiveDocument] = useState<PartyDocument | null>({
     isValid: true,
     title: "NGHỊ QUYẾT: VỀ TĂNG CƯỜNG SỨC CHIẾN ĐẤU VÀ NÂNG CAO CHẤT LƯỢNG SINH HOẠT CHI BỘ TRONG TÌNH HÌNH MỚI",
@@ -117,23 +111,7 @@ Tuy nhiên, bên cạnh những thành tích đã đạt được, việc nghiê
     setCustomApiKey(tempApiKey.trim());
     setUserEmail(tempUserEmail.trim());
     setShowConfigHelp(false);
-
-    // Add chatbot system message directly for immediate visual feedback
-    const configMsg: Message = {
-      id: Math.random().toString(),
-      role: "model",
-      content: `⚙️ **Hệ thống đã nhận cấu hình bảo mật mới:**\n- **Gmail:** \`${tempUserEmail.trim() || "(Chưa điền)"}\`\n- **API Key:** \`${tempApiKey.trim() ? "••••••••" + tempApiKey.trim().slice(-4) : "(Chưa điền)"}\`\n\nToàn bộ lượt tác nghiệp soạn thảo văn bản Đảng bằng AI của đồng chí từ bây giờ sẽ sử dụng tài khoản cá nhân đã thiết lập.`,
-      timestamp: new Date()
-    };
-    setMessages((prev) => [...prev, configMsg]);
   };
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll chat history to bottom
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
 
   // Handle Quick Builder choices - update main text input structure
   useEffect(() => {
@@ -147,44 +125,17 @@ Tuy nhiên, bên cạnh những thành tích đã đạt được, việc nghiê
     }
   }, [selectedType, selectedAuthor, excerptInput]);
 
-  // Load sample template directly
-  const handleLoadSample = (sample: typeof SAMPLES[0]) => {
-    setInputValue(`[${sample.documentType}] + [${sample.author}] + ${sample.excerpt}`);
-    // Update builder state to make UI consistent
-    const matchedType = DOCUMENT_TYPES.find(t => t.name.toLowerCase() === sample.documentType.toLowerCase());
-    const matchedAuthor = AUTHORS.find(a => a.name.toLowerCase() === sample.author.toLowerCase());
-    if (matchedType) setSelectedType(matchedType.id);
-    if (matchedAuthor) setSelectedAuthor(matchedAuthor.id);
-    setExcerptInput(sample.excerpt);
-  };
-
   // Submit to Node Backend /api/chat
   const handleSubmitPrompt = async (textToSend: string) => {
     if (!textToSend.trim()) return;
 
-    // Auto-switch to chat tab so user can see immediate feedback and loading state
+    // Auto-switch to rules or loading state if needed
     setHistoryTab("chat");
 
-    // Add user message to UI
-    const newUserMessage: Message = {
-      id: Math.random().toString(),
-      role: "user",
-      content: textToSend,
-      timestamp: new Date()
-    };
-
-    setMessages((prev) => [...prev, newUserMessage]);
     setIsLoading(true);
-    setInputValue(""); // Clear input area
-    setExcerptInput(""); // Clear excerpt
+    // Don't clear input here, let user edit if they want
 
     try {
-      // Build history for backend
-      const historyPayload = messages.map((m) => ({
-        role: m.role,
-        content: m.content
-      }));
-
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -192,7 +143,8 @@ Tuy nhiên, bên cạnh những thành tích đã đạt được, việc nghiê
         },
         body: JSON.stringify({
           message: textToSend,
-          history: historyPayload,
+          history: [], // We are removing chat history as requested
+          customRules: customDocRules,
           customApiKey: customApiKey,
           userEmail: userEmail
         })
@@ -205,43 +157,125 @@ Tuy nhiên, bên cạnh những thành tích đã đạt được, việc nghiê
       const data = await res.json();
 
       if (data.isValid) {
-        // Document generation successful
-        const newBotMessage: Message = {
-          id: Math.random().toString(),
-          role: "model",
-          content: `Đã khởi tạo thành công văn bản Đảng chuẩn pháp lý. Đồng chí có thể xem bản xem trước (A4) kết quả ở khung hiển thị bên phải.`,
-          isDocumentResult: true,
-          documentData: data,
-          timestamp: new Date()
-        };
-
-        setMessages((prev) => [...prev, newBotMessage]);
         setActiveDocument(data);
+        setIsEditing(false); // Reset edit state on new generation
       } else {
-        // Error / format warning returned from AI
-        const newBotMessage: Message = {
-          id: Math.random().toString(),
-          role: "model",
-          content: data.errorMsg || "Yêu cầu chưa đạt chuẩn cấu trúc chính trị. Đồng chí vui lòng điền đủ yếu tố Thể loại, Tác giả và Nội dung tóm lược.",
-          errorMsg: data.errorMsg,
-          timestamp: new Date()
-        };
-        setMessages((prev) => [...prev, newBotMessage]);
+        alert(data.errorMsg || "Yêu cầu chưa đạt chuẩn cấu trúc chính trị.");
       }
     } catch (err: any) {
       console.error(err);
-      const errorMsg = err.message || "Không thể kết nối máy chủ soạn thảo.";
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Math.random().toString(),
-          role: "model",
-          content: `⚠️ Gặp lỗi kỹ thuật: ${errorMsg}. Vui lòng thử lại hoặc kiểm tra xem API Key đã cấu hình chính xác chưa.`,
-          timestamp: new Date()
-        }
-      ]);
+      alert(err.message || "Không thể kết nối máy chủ soạn thảo.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDownloadDocx = async () => {
+    if (!activeDocument) return;
+
+    const docx = new Document({
+      sections: [
+        {
+          properties: {},
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({ text: "ĐẢNG CỘNG SẢN VIỆT NAM", bold: true, size: 24 }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: activeDocument.header.organization, bold: true, size: 28 }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: activeDocument.header.subHeader, size: 24 }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: activeDocument.header.locationDate, italics: true, size: 24 }),
+              ],
+              alignment: AlignmentType.RIGHT,
+            }),
+            new Paragraph({
+              text: "",
+              spacing: { after: 200 },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: activeDocument.title, bold: true, size: 32 }),
+              ],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              text: "",
+              spacing: { after: 200 },
+            }),
+            ...activeDocument.bodyMarkdown.split("\n").map((line) => {
+               let isBold = false;
+               let text = line;
+               let heading: any = undefined;
+
+               if (line.startsWith("### ")) {
+                   heading = HeadingLevel.HEADING_3;
+                   text = line.replace("### ", "").trim();
+               } else if (line.startsWith("## ")) {
+                   heading = HeadingLevel.HEADING_2;
+                   text = line.replace("## ", "").trim();
+               } else if (line.startsWith("# ")) {
+                   heading = HeadingLevel.HEADING_1;
+                   text = line.replace("# ", "").trim();
+               }
+               
+               if (text.startsWith("- ")) {
+                   text = text.substring(2);
+               }
+
+               text = text.replace(/\*\*/g, ""); // simple text dump
+
+               return new Paragraph({
+                 children: [new TextRun({ text, size: 28 })],
+                 heading: heading,
+                 spacing: { after: 120 },
+                 alignment: line.startsWith("-") ? AlignmentType.LEFT : AlignmentType.JUSTIFIED,
+               });
+            }),
+            new Paragraph({
+              text: "",
+              spacing: { after: 400 },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: activeDocument.signature.title, bold: true, size: 24 }),
+              ],
+              alignment: AlignmentType.RIGHT,
+            }),
+            new Paragraph({
+              text: "",
+              spacing: { after: 600 },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: activeDocument.signature.name, bold: true, size: 28 }),
+              ],
+              alignment: AlignmentType.RIGHT,
+            }),
+          ],
+        },
+      ],
+    });
+
+    try {
+      const blob = await Packer.toBlob(docx);
+      saveAs(blob, `${activeDocument.title.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30)}.docx`);
+    } catch (e) {
+      console.error(e);
+      alert("Lỗi tạo Docx");
     }
   };
 
@@ -460,77 +494,18 @@ ${activeDocument.signature.name}
 
             {/* Chat screen / Rule screen dynamic view */}
             {historyTab === "chat" ? (
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fafbfc]" id="chat_scroll_area">
-                {messages.map((m) => {
-                  const isUser = m.role === "user";
-                  return (
-                    <div
-                      key={m.id}
-                      className={`flex ${isUser ? "justify-end" : "justify-start"} items-start gap-2.5 animate-fadeIn`}
-                    >
-                      {/* Avatar */}
-                      {!isUser && (
-                        <div className="w-8 h-8 rounded-full bg-red-700 text-white flex items-center justify-center font-bold font-serif text-sm border-2 border-white shadow shadow-red-200 shrink-0 select-none mt-1">
-                          Đ
-                        </div>
-                      )}
-
-                      <div className="max-w-[85%] flex flex-col">
-                        <div
-                          className={`p-3.5 rounded-2xl shadow-sm text-sm ${
-                            isUser
-                              ? "bg-[#991B1B] text-white rounded-tr-none font-medium ml-auto"
-                              : m.errorMsg
-                              ? "bg-amber-50 text-amber-900 border border-amber-200 rounded-tl-none font-sans"
-                              : "bg-white text-slate-800 border border-slate-200/80 rounded-tl-none font-sans"
-                          }`}
-                        >
-                          {/* Render custom warnings when not compliant */}
-                          {m.errorMsg ? (
-                            <div className="space-y-3">
-                              <div className="flex items-start gap-2 text-amber-800 font-semibold text-xs uppercase tracking-wide border-b border-amber-200 pb-1.5">
-                                <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
-                                Thông báo quy chế định dạng văn phong
-                              </div>
-                              <p className="text-slate-800 leading-relaxed text-sm select-text whitespace-pre-wrap">
-                                {m.errorMsg}
-                              </p>
-                              <div className="bg-white/60 p-3 rounded-lg border border-amber-100 text-[12px] text-slate-700 space-y-2">
-                                <span className="font-bold text-slate-900">Đồng chí lưu ý cú pháp chuẩn:</span>
-                                <div className="font-mono bg-slate-900 text-amber-400 p-2 rounded p-1 text-center font-semibold text-xs select-all">
-                                  [Thể loại] + [Tác giả] + Trích yếu nội dung
-                                </div>
-                                <span className="block italic mt-1 text-slate-500">
-                                  Ví dụ: Quyết định + Ủy ban Kiểm tra và Giám sát Huyện ủy + Thi hành kỷ luật...
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="whitespace-pre-line leading-relaxed select-text font-sans">
-                              {m.content}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-[10px] text-slate-400 mt-1 px-1 select-none">
-                          {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {isLoading && (
-                  <div className="flex justify-start items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-slate-300 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0 animate-pulse select-none">
-                      AI
-                    </div>
-                    <div className="bg-slate-100 text-slate-500 text-xs px-4 py-2.5 rounded-full border border-slate-200 flex items-center gap-2 font-medium">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#991B1B]" />
-                      Đồng chí vui lòng đợi trong giây lát, trợ lý đang dự thảo...
-                    </div>
+              <div className="flex-1 overflow-y-auto p-4 bg-[#fafbfc] flex flex-col justify-center items-center h-full text-center" id="chat_scroll_area">
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center gap-4 py-12">
+                    <RefreshCw className="w-8 h-8 animate-spin text-[#991B1B]" />
+                    <p className="text-slate-600 font-semibold uppercase tracking-wider text-xs">Đang dự thảo văn bản...</p>
+                  </div>
+                ) : (
+                  <div className="text-slate-400 space-y-3">
+                    <BookOpen className="w-12 h-12 mx-auto text-slate-300" />
+                    <p>Nhập yêu cầu chi tiết để trợ lý AI kiến tạo văn bản.</p>
                   </div>
                 )}
-                <div ref={chatEndRef} />
               </div>
             ) : (
               // Instruction list
@@ -566,36 +541,6 @@ ${activeDocument.signature.name}
                 </div>
               </div>
             )}
-
-            {/* QUICK PRESET SAMPLES BAR */}
-            <div className="bg-white border-t border-slate-200 px-4 py-3 shrink-0" id="quick_select_presets">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 leading-none select-none">
-                  <BookOpen className="w-3 h-3 text-red-700" />
-                  Mẫu văn bản tiêu chuẩn & Định hướng chính trị nhanh
-                </span>
-                <span className="text-[10px] text-slate-400 hidden sm:inline select-none">
-                  Click để nạp nhanh cấu trúc yêu cầu
-                </span>
-              </div>
-              
-              <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin select-none">
-                {SAMPLES.map((sample, sIdx) => (
-                  <button
-                    key={sIdx}
-                    onClick={() => handleLoadSample(sample)}
-                    className="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-left shrink-0 w-64 text-xs transition duration-150 cursor-pointer flex flex-col justify-between"
-                  >
-                    <span className="font-bold text-slate-800 mb-1 line-clamp-1 block">
-                      {sample.label}
-                    </span>
-                    <span className="text-[10px] text-slate-500 line-clamp-1">
-                      {sample.excerpt}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* TRÌNH KIẾN TẠO NHANH (QUICK FORM BUILDER BOX) */}
             <div className="bg-slate-50 border-t border-slate-200 p-4 shrink-0" id="interactive_form_builder">
@@ -677,8 +622,27 @@ ${activeDocument.signature.name}
                 />
               </div>
 
-              {/* Textarea for direct input review & action */}
-              <div className="border-t border-slate-200 pt-3 relative" id="final_drafting_prompt">
+              {/* Custom Rules Input */}
+              <div className="mb-3">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-[11px] font-bold text-slate-600 uppercase select-none">
+                    Quy tắc / Bố cục bổ sung (Tùy chọn)
+                  </label>
+                  <span className="text-[9px] text-slate-400 italic">
+                    Ép buộc hệ thống tuân thủ theo ý muốn
+                  </span>
+                </div>
+                <textarea
+                  value={customDocRules}
+                  onChange={(e) => setCustomDocRules(e.target.value)}
+                  placeholder="Ví dụ: Bắt buộc chia cấu trúc thành 4 phần, phần kết mở rộng 200 chữ, sử dụng văn phong quyết liệt..."
+                  className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 h-16 resize-y"
+                />
+              </div>
+            </div>
+
+            {/* ENTRY PROMPT INPUT */}
+            <div className="bg-slate-50 border-t border-slate-200 p-4 pt-0 shrink-0" id="final_drafting_prompt">
                 {(!customApiKey || !userEmail) && (
                   <div className="bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-2.5 mb-2.5 flex items-start gap-2 text-xs">
                     <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5 animate-pulse" />
@@ -701,8 +665,7 @@ ${activeDocument.signature.name}
                   </div>
                   <button
                     onClick={() => {
-                      setExcerptInput("");
-                      setInputValue("[Nghị quyết] + [Ban Chấp hành Trung ương] + ");
+                      setInputValue("");
                     }}
                     className="text-[10px] text-red-600 hover:underline flex items-center gap-0.5"
                     title="Xóa trắng để nhập tự do"
@@ -737,8 +700,6 @@ ${activeDocument.signature.name}
                 </div>
               </div>
 
-            </div>
-
           </div>
         </section>
 
@@ -766,6 +727,38 @@ ${activeDocument.signature.name}
                   Độ khớp Đảng quy: {documentStats.score}%
                 </span>
               </div>
+
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                className={`text-xs px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer ${
+                  isEditing ? "bg-[#991B1B] text-white border border-[#991B1B]" : "bg-white hover:bg-slate-50 border border-slate-200 text-slate-700"
+                }`}
+                title={isEditing ? "Lưu thay đổi văn bản" : "Chỉnh sửa nội dung văn bản trực tiếp"}
+                disabled={!activeDocument}
+              >
+                {isEditing ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Lưu nội dung
+                  </>
+                ) : (
+                  <>
+                    <Settings className="w-3.5 h-3.5" />
+                    Sửa đổi
+                  </>
+                )}
+              </button>
+
+              {/* Download docx button */}
+              <button
+                onClick={handleDownloadDocx}
+                className="bg-[#991B1B] hover:bg-red-800 border-red-900 border text-white text-xs px-3 py-1.5 rounded-md font-bold transition flex items-center gap-1 shadow-sm active:scale-95 cursor-pointer"
+                title="Tải văn bản định dạng Word (.docx)"
+                disabled={!activeDocument}
+              >
+                <FileDown className="w-3.5 h-3.5" />
+                Tải về Word
+              </button>
 
               {/* Copy plain-text button */}
               <button
@@ -832,9 +825,17 @@ ${activeDocument.signature.name}
                   </h2>
                 </div>
 
-                {/* 3. Fully formatted content with custom parser */}
+                {/* 3. Fully formatted content with custom parser OR TextArea for Editing */}
                 <div className="text-sm md:text-base space-y-4 flex-1 relative z-10 select-text">
-                  {parseDocumentBody(activeDocument.bodyMarkdown)}
+                  {isEditing ? (
+                    <textarea 
+                      className="w-full h-full min-h-[500px] border-2 border-red-300 p-4 rounded-lg bg-red-100/50 focus:outline-none focus:ring-2 focus:ring-red-600 font-serif leading-relaxed text-slate-900 resize-y"
+                      value={activeDocument.bodyMarkdown}
+                      onChange={(e) => setActiveDocument({ ...activeDocument, bodyMarkdown: e.target.value })}
+                    />
+                  ) : (
+                    parseDocumentBody(activeDocument.bodyMarkdown)
+                  )}
                 </div>
 
                 {/* 4. Signature Block (Left stamp placeholder / Right authorized name) */}
