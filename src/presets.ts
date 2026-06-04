@@ -56,6 +56,27 @@ export const DOCUMENT_TYPES: DocumentTypePreset[] = [
     abbreviation: "KH",
     description: "Vạch lộ trình, biện pháp và thời gian biểu hoàn thành mục tiêu cụ thể",
     placeholderText: "ví dụ: Tổ chức đại hội các chi bộ trực thuộc tiến tới Đại hội Đảng bộ cơ sở."
+  },
+  {
+    id: "cong-van",
+    name: "Công văn",
+    abbreviation: "CV",
+    description: "Trực tiếp trao đổi, giao dịch công tác, đôn đốc đệ trình báo cáo nghiệp vụ tuyển lựa",
+    placeholderText: "ví dụ: Về việc đôn đốc báo cáo sơ kết công tác Đảng bộ 6 tháng đầu năm."
+  },
+  {
+    id: "thong-bao",
+    name: "Thông báo",
+    abbreviation: "TB",
+    description: "Thông tin kết luận cuộc họp, ý kiến chỉ đạo hành chính định kỳ của thường trực cấp ủy",
+    placeholderText: "ví dụ: Ý kiến kết luận của Thường trực Huyện ủy về công tác quy hoạch chuẩn bị cán bộ."
+  },
+  {
+    id: "giay-moi",
+    name: "Giấy mời",
+    abbreviation: "GM",
+    description: "Mời đại diện lãnh đạo, đảng viên hoặc khách mời dự hội nghị, hội họp chuyên đề trọng đại",
+    placeholderText: "ví dụ: Tham dự Hội thảo nâng cao năng lực lãnh đạo, sức chiến đấu tổ chức Đảng cơ sở."
   }
 ];
 
@@ -107,6 +128,36 @@ export const AUTHORS: AuthorPreset[] = [
     name: "Chi bộ Cơ sở",
     subHeaderSuffix: "CB",
     defaultSignatureTitle: "T/M CHI BỘ\nBÍ THƯ"
+  },
+  {
+    id: "uy-ban-kiem-tra-local",
+    name: "Ủy ban Kiểm tra",
+    subHeaderSuffix: "UBKT",
+    defaultSignatureTitle: "T/M ỦY BAN KIỂM TRA\nCHỦ NHIỆM"
+  },
+  {
+    id: "ban-tuyen-giao-dan-van",
+    name: "Ban Tuyên giáo và Dân vận",
+    subHeaderSuffix: "TGDV",
+    defaultSignatureTitle: "T/M BAN TUYÊN GIÁO VÀ DÂN VẬN\nTRƯỞNG BAN"
+  },
+  {
+    id: "ban-to-chuc",
+    name: "Ban Tổ chức",
+    subHeaderSuffix: "BTC",
+    defaultSignatureTitle: "T/M BAN TỔ CHỨC\nTRƯỞNG BAN"
+  },
+  {
+    id: "ban-xay-dung-dang",
+    name: "Ban Xây dựng Đảng",
+    subHeaderSuffix: "BXDĐ",
+    defaultSignatureTitle: "T/M BAN XÂY DỰNG ĐẢNG\nTRƯỞNG BAN"
+  },
+  {
+    id: "van-phong",
+    name: "Văn phòng",
+    subHeaderSuffix: "VP",
+    defaultSignatureTitle: "T/M VĂN PHÒNG\nCHÁNH VĂN PHÒNG"
   }
 ];
 
